@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. CSS 樣式修正 (絕對置中方案) ---
+# --- 2. CSS 樣式修正 ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -59,30 +59,29 @@ st.markdown("""
         color: white;
     }
 
-    /* --- 核心修正：強制按鈕容器置中 --- */
-    .stButton {
-        text-align: center;
-        display: flex;
-        justify-content: center;
-        margin: 4rem auto;
-        width: 100%;
-    }
-    
+    /* --- 強制按鈕與文字放大 --- */
     .stButton > button {
         background: #38bdf8 !important;
         color: #0f172a !important;
-        font-size: 2rem !important; /* 更大的字體 */
+        font-size: 2.5rem !important; /* 再放大字體 */
         font-weight: 900 !important;
-        padding: 1.5rem 6rem !important; /* 極大的點擊區域 */
-        border-radius: 15px !important;
+        height: 5rem !important;
+        border-radius: 20px !important;
         border: none !important;
-        box-shadow: 0 0 20px rgba(56, 189, 248, 0.4) !important;
+        box-shadow: 0 0 25px rgba(56, 189, 248, 0.5) !important;
         transition: 0.3s !important;
+        width: 100% !important; /* 填滿容器 */
     }
     
     .stButton > button:hover {
-        transform: scale(1.1) !important;
+        transform: scale(1.02) !important;
         background: #7dd3fc !important;
+    }
+
+    /* 針對按鈕文字的額外放大 */
+    .stButton > button p {
+        font-size: 2.5rem !important;
+        font-weight: 900 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -119,13 +118,17 @@ for i in range(0, 6, 3):
                 <div style="color:#94a3b8; text-align:center;">{f['desc']}</div>
             </div>""", unsafe_allow_html=True)
 
-# --- 4. 關鍵按鈕區域：不再使用 col 包裹 ---
-# 直接呼叫 button，CSS 中的 .stButton 會負責將其寬度撐滿並置中內容
-if st.button("🚀 開 始 體 驗"):
-    st.balloons()
-    time.sleep(0.5)
-    st.switch_page("pages/main.py")
+# --- 4. 操作區：使用三欄式布局並將按鈕置於中間 ---
+st.markdown("<br><br>", unsafe_allow_html=True)
+left, mid, right = st.columns([1, 2, 1]) # 中間寬度佔 2/4
+with mid:
+    # use_container_width=True 確保它填滿中間這 2/4 的寬度，達到視覺絕對置中
+    if st.button("🚀 開 始 體 驗", use_container_width=True):
+        st.balloons()
+        time.sleep(0.5)
+        st.switch_page("pages/main.py")
 
+# 頁尾
 st.markdown("""
     <div style='text-align: center; color: #64748b; padding-top: 5rem; padding-bottom: 2rem;'>
         <p style='font-size: 0.85rem;'>本工具僅供教學參考，投資必有風險，入市請謹慎評估。</p>
