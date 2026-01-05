@@ -169,7 +169,7 @@ for i in range(0, 6, 3):
 st.write("")
 col1, col2, col3 = st.columns([1, 1.5, 1])
 with col2:
-    if st.button("🚀 開 始 体 驗"):
+    if st.button("🚀 開 始 體 驗"):
         st.balloons()
         time.sleep(1)
         st.switch_page("pages/main.py")
