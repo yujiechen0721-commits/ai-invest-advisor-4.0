@@ -11,14 +11,24 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. CSS 進階美化 ---
+# --- 2. CSS 進階美化 (包含隱藏側邊欄按鈕) ---
 st.markdown("""
     <style>
+    /* 隱藏主選單與頁首頁尾 */
     #MainMenu {visibility: hidden;}
     header {visibility: hidden;}
     footer {visibility: hidden;}
+    
+    /* 隱藏側邊欄收摺按鈕 (Collapse Button) */
+    [data-testid="sidebar-button"] {
+        display: none !important;
+    }
+    
     .stApp { background: #0f172a; color: #f1f5f9; }
-    [data-testid="stSidebar"] { background-color: #1e293b; border-right: 1px solid rgba(255,255,255,0.1); }
+    [data-testid="stSidebar"] { 
+        background-color: #1e293b; 
+        border-right: 1px solid rgba(255,255,255,0.1); 
+    }
     
     .glass-card {
         background: rgba(30, 41, 59, 0.7);
@@ -28,6 +38,13 @@ st.markdown("""
         backdrop-filter: blur(10px);
         margin-bottom: 20px;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .status-card {
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(52, 211, 153, 0.1) 100%);
+        border: 1px dashed rgba(52, 211, 153, 0.3);
+        border-radius: 12px;
+        padding: 20px;
     }
     
     .main-title {
@@ -59,21 +76,16 @@ st.markdown("""
 
 # --- 3. 核心計算邏輯 ---
 def calculate_metrics(u_risk, u_years, u_monthly):
-    # 預估報酬與波動隨風險等級變動
     base_return = 0.042  
     risk_premium = (u_risk / 10) * 0.052 
     annual_return = base_return + risk_premium
     volatility = 0.04 + (u_risk / 10) * 0.16
     
-    # 複利計算
     r_monthly = annual_return / 12
     months = u_years * 12
     final_value = u_monthly * (((1 + r_monthly)**months - 1) / r_monthly) * (1 + r_monthly)
     
-    # 風險指標模擬 (隨風險與權重連動)
-    # 夏普值模擬公式: (報酬 - 無風險回報2%) / 波動率
     sharpe = (annual_return - 0.02) / volatility
-    # MDD模擬: 風險越高回撤越重
     mdd = - (0.05 + (u_risk / 10) * 0.32)
     
     return annual_return, volatility, final_value, sharpe, mdd
@@ -106,21 +118,43 @@ st.markdown('<div class="main-title">AI 投資小秘書</div>', unsafe_allow_htm
 st.markdown("<p style='text-align: center; color: #94a3b8;'>數據驅動的 ETF 自動化配置專家</p>", unsafe_allow_html=True)
 
 if not btn_start and 'analyzed' not in st.session_state:
-    col1, col2 = st.columns([1, 1])
+    col1, col2 = st.columns([1.2, 0.8])
     with col1:
         st.markdown("""
         <div class="glass-card">
-            <h2 style='color:#34d399;'>核心技術優勢</h2>
-            <ul style='color:#cbd5e1; line-height:2;'>
-                <li><b>MPT 理論模型：</b> 透過現代投資組合作業研究，最大化單位風險回報。</li>
-                <li><b>動態再平衡算法：</b> 根據年齡與風險承受度即時演算。</li>
-                <li><b>複利成長路徑：</b> 精準模擬長線資產配置增值潛力。</li>
+            <h2 style='color:#34d399; margin-bottom:20px;'>💡 準備好開啟您的資產增長嗎？</h2>
+            <p style='color:#cbd5e1; font-size:1.1rem; line-height:1.8;'>
+                我們將透過 <b>Yahoo Finance</b> 獲取即時市場數據，結合 <b>現代投資組合法 (MPT)</b>，為您量身打造專屬配置。
+                請在左側輸入您的財務現況，AI 將為您精算出未來 20 年的複利資產價值。
+            </p>
+            <hr style='border-color:rgba(255,255,255,0.1); margin:25px 0;'>
+            <h4 style='color:#38bdf8;'>核心技術優勢</h4>
+            <ul style='color:#94a3b8; line-height:2;'>
+                <li><b>MPT 理論模型：</b> 最大化單位風險回報。</li>
+                <li><b>動態再平衡算法：</b> 根據年齡與風險即時演算。</li>
+                <li><b>複利成長路徑：</b> 精準模擬長線增值潛力。</li>
             </ul>
-            <p style='color:#94a3b8; font-size:0.9rem;'>請調整左側參數並點擊「執行分析」以獲取個人化報告。</p>
         </div>
         """, unsafe_allow_html=True)
     with col2:
-        st.image("https://images.unsplash.com/photo-1551288049-bbbda546697a?q=80&w=1000", caption="AI 智慧演算引擎運作中")
+        st.markdown("""
+        <div class="status-card">
+            <h4 style='color:#34d399; margin-top:0;'>🤖 AI 引擎狀態</h4>
+            <code style='color:#38bdf8; background:none; padding:0;'>[SYSTEM]: READY</code><br>
+            <code style='color:#94a3b8; background:none; padding:0;'>[DATA]: SYNCED WITH CLOUD</code><br>
+            <code style='color:#94a3b8; background:none; padding:0;'>[MODEL]: MPT-V2.5 ACTIVE</code><br><br>
+            <p style='font-size:0.85rem; color:#64748b;'>等待使用者觸發運算指令... 調整左側滑桿以更新權重參數。</p>
+            <div style='background:rgba(52, 211, 153, 0.2); height:4px; width:100%; border-radius:2px;'>
+                <div style='background:#34d399; height:4px; width:100%; border-radius:2px; animation: pulse 2s infinite;'></div>
+            </div>
+        </div>
+        <br>
+        <div class="glass-card" style="padding:15px;">
+            <p style='font-size:0.8rem; color:#94a3b8; margin:0;'>
+                ⚠️ 提示：建議投資期間至少設定為 10 年以上，以發揮最大的複利效應。
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 else:
     st.session_state['analyzed'] = True
     ann_ret, vol, fv, sharpe, mdd = calculate_metrics(u_risk, u_years, u_monthly)
@@ -165,7 +199,6 @@ else:
         st.plotly_chart(fig_line, use_container_width=True)
 
     with t3:
-        # 修復點：深度壓力測試報告數據動態化
         st.markdown("#### ⚡ 深度壓力測試報告")
         rc1, rc2, rc3 = st.columns(3)
         with rc1:
@@ -175,9 +208,9 @@ else:
         with rc3:
             st.markdown(f'<div class="glass-card" style="text-align:center;"><h5>風險評級 (VaR)</h5><h2 style="color:#fbbf24;">{"低" if u_risk < 4 else "中" if u_risk < 8 else "高"}</h2><p>資產組合波動耐受度</p></div>', unsafe_allow_html=True)
         
-        # 動態專業建議文字
+        # 動態專業建議文字 (已移除原本關於恢復期的部分)
         rec_text = "您的組合極為穩健，適合資產保值。" if u_risk < 4 else "您的組合均衡成長，具備良好的風險收益比。" if u_risk < 8 else "您的組合極具進攻性，需注意短期市場劇烈波動。"
-        st.info(f"💡 **AI 專業建議**：{rec_text} 模擬數據顯示，恢復至歷史高點預估需 **{max(6, int(u_risk*2))}** 個月。")
+        st.info(f"💡 **AI 專業建議**：{rec_text}")
 
     with t4:
         st.markdown("#### 🔍 標的成分深度剖析")
@@ -186,18 +219,14 @@ else:
             with st.expander("📊 0050.TW 元大台灣50"):
                 st.write("**內扣費用：** 0.43%")
                 st.write("**主要持股：** 台積電、聯發科、鴻海、廣達、台達電。")
-                st.write("**投資重點：** 代表台灣競爭力最強的 50 家龍頭企業，與台股連動性極高。")
             with st.expander("🌍 VT 全球股票 ETF"):
                 st.write("**內扣費用：** 0.07%")
-                st.write("**投資範圍：** 涵蓋美國、歐洲、新興市場等全球超過 9,000 檔股票。")
-                st.write("**投資重點：** 徹底分散單一國家風險，捕捉全球經濟增長紅利。")
+                st.write("**投資範圍：** 全球超過 9,000 檔股票。")
         with col_b:
             with st.expander("🛡️ BND 全球債券 ETF"):
-                st.write("**配息率：** 約 3.5% - 4.5% (隨利率環境波動)")
-                st.write("**信評分布：** 超過 60% 為 AAA 級政府債或高信用評等公司債。")
-                st.write("**投資重點：** 作為投資組合的減震器，在股市大跌時提供緩衝。")
-            with st.expander("💰 0056.TW 元大高股息 (備選方案)"):
-                st.write("**核心特色：** 選取預測股息率最高之 50 檔股票，適合現金流需求者。")
-                st.write("**策略邏輯：** AI 會根據您的風險偏好決定是否將此標的納入衛星配置。")
+                st.write("**配息率：** 約 3.5% - 4.5%")
+                st.write("**信評分布：** 超過 60% 為 AAA 級政府債。")
+            with st.expander("💰 0056.TW 元大高股息"):
+                st.write("**核心特色：** 選取高股息殖利率標的，適合現金流需求。")
 
 st.markdown("<br><hr><p style='text-align: center; color: #64748b;'>© 2026 AI Investment Assistant Team | 數據模擬僅供參考，不構成實際投資建議</p>", unsafe_allow_html=True)
