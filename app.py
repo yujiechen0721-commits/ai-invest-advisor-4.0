@@ -1,3 +1,14 @@
+# 隱藏右上角 GitHub + Fork 按鈕
+hide_menu_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    .stDeployButton {display:none;}
+    </style>
+    """
+st.markdown(hide_menu_style, unsafe_allow_html=True)
+
+
 import streamlit as st
 import yfinance as yf
 import pandas as pd
