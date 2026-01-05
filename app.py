@@ -3,7 +3,6 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-import google.generativeai as genai
 import json
 import re
 
@@ -15,50 +14,54 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. 安全讀取 API Key ---
-if "GEMINI_API_KEY" in st.secrets:
-    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-else:
-    # 這裡保留一個本地測試的彈性
-    GEMINI_API_KEY = "這裡放你的_GEMINI_API_KEY"
+# --- 2. 核心功能函式 (專家邏輯取代 AI 串接) ---
 
-# --- 3. 核心功能函式 ---
+def get_expert_allocation(age, risk_level):
+    """
+    根據『年齡』與『風險偏好』自動計算配比
+    邏輯：年齡越大，BND(債券)比例越高；風險越高，0050與VT比例越高
+    """
+    # 基礎比例計算 (100 - 年齡 = 積極資產佔比)
+    equity_base = max(0.2, (100 - age) / 100)
+    
+    # 根據風險等級 (1-10) 調整
+    risk_factor = risk_level / 10
+    
+    # 計算各標的權重
+    bnd_w = max(0.1, 1 - (equity_base * risk_factor))
+    remaining = 1 - bnd_w
+    
+    # 將剩餘比例分配給股票型 ETF
+    vt_w = remaining * 0.4
+    stock_tw_total = remaining * 0.6
+    
+    # 台灣股票再拆分市值型與高股息
+    # 風險越高，0050 越多；風險越低，0056 越多
+    tw_0050_w = stock_tw_total * risk_factor
+    tw_0056_w = stock_tw_total * (1 - risk_factor)
+    
+    weights = {
+        "0050.TW": round(tw_0050_w, 2),
+        "0056.TW": round(tw_0056_w, 2),
+        "VT": round(vt_w, 2),
+        "BND": round(bnd_w, 2)
+    }
+    
+    # 確保總和為 1 (修正捨入誤差)
+    diff = 1.0 - sum(weights.values())
+    weights["0050.TW"] += round(diff, 2)
 
-def get_ai_allocation(age, risk_level, goal_desc):
-    """透過 Gemini AI 取得精準配比，含強大報錯處理"""
-    # 預設組合：萬一 AI 失敗，這組數據保證圖表能跑
-    default_weights = {"0050.TW": 0.4, "0056.TW": 0.2, "VT": 0.2, "BND": 0.2}
-    default_reason = "由於 AI 顧問連線異常或格式解析問題，目前為您展示標準平衡型配置。請檢查 Secrets 設定。"
+    # 產生顧問評論
+    reason = f"根據您的年齡({age}歲)與風險承受度({risk_level}/10)，系統為您配置了 "
+    reason += f"{weights['BND']*100:.0f}% 的防禦性資產與 {(1-weights['BND'])*100:.0f}% 的攻擊性資產。 "
+    if risk_level >= 7:
+        reason += "此配置著重於長期資本增值，適合能忍受短期波動並追求財富翻倍的您。"
+    elif risk_level <= 4:
+        reason += "此配置著重於資產保護與穩定配息，適合追求資產穩健成長的保守型投資者。"
+    else:
+        reason += "這是一個平衡型配置，兼顧了全球分散投資與台灣市場的成長性。"
 
-    # 檢查 Key 是否為預設值
-    if not GEMINI_API_KEY or "這裡放" in GEMINI_API_KEY:
-        return default_weights, "⚠️ 未檢測到有效的 API Key，已載入標準平衡配置。請至 Streamlit Secrets 設定鍵值。"
-
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        # 使用穩定版本模型
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        prompt = f"""
-        你是一位專業投資顧問。請為以下用戶配置 0050.TW, 0056.TW, VT, BND 四檔標的的投資比例：
-        用戶資訊：年齡 {age} 歲、風險偏好 {risk_level}/10、目標：{goal_desc}。
-        請嚴格依照 JSON 格式回傳（權重總和必須為 1.0），不要回傳任何額外文字。
-        回傳範例：{{ "weights": {{"0050.TW": 0.4, "0056.TW": 0.2, "VT": 0.2, "BND": 0.2}}, "reason": "分析原因..." }}
-        """
-        response = model.generate_content(prompt)
-        
-        # 強化解析 JSON (找出字串中第一個 { 和最後一個 })
-        match = re.search(r'\{.*\}', response.text, re.DOTALL)
-        if match:
-            result = json.loads(match.group())
-            # 確保權重是數值而非字串
-            final_weights = {k: float(v) for k, v in result['weights'].items()}
-            return final_weights, result.get('reason', 'AI 已完成配置。')
-        else:
-            return default_weights, "AI 回傳格式非 JSON，已使用預設組合。"
-            
-    except Exception as e:
-        return default_weights, f"AI 分析發生錯誤：{str(e)}。已為您切換至標準平衡配置，確保功能正常運作。"
+    return weights, reason
 
 @st.cache_data(ttl=86400)
 def fetch_data(tickers):
@@ -71,23 +74,18 @@ def fetch_data(tickers):
         return pd.DataFrame()
 
 def run_simulation(weights, monthly_amt, years, returns_df):
-    """執行複利模擬 - 具備 NaN 補償機制"""
+    """執行複利模擬 - 含波動率補償"""
     try:
-        if returns_df.empty:
-            raise ValueError("No data")
-            
         w_series = pd.Series(weights)
         portfolio_return = (returns_df * w_series).sum(axis=1)
-        
         avg_ret = portfolio_return.mean()
         std_ret = portfolio_return.std()
         
-        # 萬一 yfinance 數據有問題，給予年化約 8% 的基本報酬模擬
+        # 若無數據，預設年化 7.2%
         if np.isnan(avg_ret):
-            avg_ret, std_ret = 0.0065, 0.015
+            avg_ret, std_ret = 0.006, 0.015
     except:
-        # 最終保險：完全抓不到數據時的假設定
-        avg_ret, std_ret = 0.0065, 0.015
+        avg_ret, std_ret = 0.006, 0.015
 
     balance = 0
     history = []
@@ -100,35 +98,35 @@ def run_simulation(weights, monthly_amt, years, returns_df):
     
     return history, avg_ret * 12
 
-# --- 4. 側邊欄 ---
+# --- 3. 側邊欄 ---
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/2850/2850343.png", width=80)
-    st.title("AI 參數設定")
+    st.title("投資參數設定")
     st.divider()
     
     u_age = st.slider("您的年齡", 18, 80, 25)
     u_risk = st.select_slider("風險承受度 (1-10)", options=list(range(1, 11)), value=7)
     u_monthly = st.number_input("每月預計投入 (TWD)", min_value=1000, value=10000, step=1000)
-    u_goal = st.text_area("投資目標描述", "我想在 20 年後退休。")
+    u_goal = st.text_area("投資目標描述", "我想在 20 年後存到退休金。")
     
     st.divider()
-    btn_start = st.button("🚀 生成個人化投資組合", use_container_width=True, type="primary")
+    btn_start = st.button("🚀 開始智能模擬", use_container_width=True, type="primary")
 
-# --- 5. 主內容顯示 ---
+# --- 4. 主內容顯示 ---
 st.title("💰 AI 投資小秘書")
 st.markdown("##### 定期定額 ETF 智能配置與複利模擬工具")
 
 if not btn_start and 'init' not in st.session_state:
-    st.info("👋 歡迎！請在左側面板輸入您的資料，然後點擊「生成個人化投資組合」。")
+    st.info("👋 歡迎！請在左側面板輸入您的資料，然後點擊「開始智能模擬」。")
     st.image("https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&q=80&w=1200", caption="長期投資是累積財富的最佳路徑")
 else:
     st.session_state['init'] = True
-    with st.spinner('正在分析中，請稍候...'):
-        # 1. AI 計算
-        weights, reason = get_ai_allocation(u_age, u_risk, u_goal)
-        # 2. 數據獲取
+    with st.spinner('正在分析數據中...'):
+        # 1. 執行專家邏輯配置
+        weights, reason = get_expert_allocation(u_age, u_risk)
+        # 2. 獲取數據
         hist_returns = fetch_data(list(weights.keys()))
-        # 3. 模擬
+        # 3. 執行模擬
         sim_history, annual_ret = run_simulation(weights, u_monthly, 20, hist_returns)
 
     tab1, tab2, tab3 = st.tabs(["📊 資產配置", "📈 成效預測", "🔎 標的深度分析"])
@@ -138,15 +136,16 @@ else:
         with c1:
             fig_pie = go.Figure(data=[go.Pie(labels=list(weights.keys()), 
                                             values=list(weights.values()), 
-                                            hole=.4)])
+                                            hole=.4,
+                                            marker=dict(colors=['#00FFAA', '#1F77B4', '#FF7F0E', '#D62728']))])
             fig_pie.update_layout(title="建議比例佔比", margin=dict(t=30, b=0, l=0, r=0))
             st.plotly_chart(fig_pie, use_container_width=True)
         with c2:
-            st.subheader("🤖 AI 顧問分析建議")
+            st.subheader("💡 顧問分析建議")
             st.success(reason)
             st.write("---")
             for ticker, w in weights.items():
-                st.write(f"**{ticker}**：`{w*100:.1f}%`")
+                st.write(f"**{ticker}**：`{w*100:.0f}%`")
 
     with tab2:
         st.subheader("20 年投資資產成長模擬")
@@ -160,18 +159,18 @@ else:
         total_cost = u_monthly * 12 * 20
         m1.metric("20年總投入成本", f"${total_cost:,.0f}")
         m2.metric("20年後預估資產", f"${final_val:,.0f}", delta=f"獲利 {((final_val/total_cost)-1)*100:.1f}%")
-        m3.metric("組合歷史模擬年化", f"{annual_ret*100:.2f}%")
+        m3.metric("組合模擬年化率", f"{annual_ret*100:.2f}%")
 
     with tab3:
         st.markdown("""
         ### 配置標的小檔案
         | 標的代码 | 名稱 | 核心屬性 |
         |---|---|---|
-        | **0050.TW** | 元大台灣50 | 追蹤台灣前50大公司。 |
-        | **0056.TW** | 元大高股息 | 著重現金流收益。 |
-        | **VT** | Vanguard World | 全球股票配置。 |
-        | **BND** | Vanguard Bond | 債券避險資產。 |
+        | **0050.TW** | 元大台灣50 | 追蹤台灣市值前50大。 |
+        | **0056.TW** | 元大高股息 | 鎖定高股息成分股。 |
+        | **VT** | Vanguard World | 投資全球股票市場。 |
+        | **BND** | Vanguard Bond | 全球債券避險。 |
         """)
 
 st.divider()
-st.caption("警語：數據僅供參考，不代表未來投資績效。")
+st.caption("警語：數據模擬基於歷史表現，不保證未來獲利。投資前請自行評估風險。")
