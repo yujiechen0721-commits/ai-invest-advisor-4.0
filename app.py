@@ -1,13 +1,4 @@
-# --- 隱藏右上角 GitHub、Fork 與 Deploy 按鈕 ---
-st.markdown("""
-    <style>
-    #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
-    .stAppDeployButton {display:none;}
-    #stDecoration {display:none;}
-    </style>
-    """, unsafe_allow_html=True)
+
 
 import streamlit as st
 import yfinance as yf
@@ -24,6 +15,18 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# --- 隱藏右上角 GitHub、Fork 與 Deploy 按鈕 ---
+st.markdown("""
+    <style>
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stAppDeployButton {display:none;}
+    #stDecoration {display:none;}
+    </style>
+    """, unsafe_allow_html=True)
+
 
 # --- 2. 核心功能函式 (專家邏輯取代 AI 串接) ---
 
