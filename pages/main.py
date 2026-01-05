@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. CSS 進階美化 ---
+# --- 2. CSS 進階美化 (修復縮排與特殊空格) ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -60,12 +60,12 @@ st.markdown("""
 # --- 3. 核心計算邏輯 (AI 算法模擬) ---
 def calculate_metrics(u_risk, u_years, u_monthly):
     # 模擬各風險等級的預估回報與波動
-    base_return = 0.045  # 基礎無風險利率補償
+    base_return = 0.045  
     risk_premium = (u_risk / 10) * 0.05 
     annual_return = base_return + risk_premium
     volatility = 0.05 + (u_risk / 10) * 0.15
     
-    # 複利計算公式: FV = P * [((1 + r)^n - 1) / r] * (1 + r)
+    # 複利計算公式: 考慮每月投入的終值
     r_monthly = annual_return / 12
     months = u_years * 12
     final_value = u_monthly * (((1 + r_monthly)**months - 1) / r_monthly) * (1 + r_monthly)
@@ -73,6 +73,7 @@ def calculate_metrics(u_risk, u_years, u_monthly):
     return annual_return, volatility, final_value
 
 def get_allocation(age, risk):
+    # 根據年齡與風險動態計算
     bnd_w = min(0.8, max(0.1, (age + (10 - risk) * 5) / 100))
     equity_w = 1 - bnd_w
     weights = {
@@ -80,8 +81,9 @@ def get_allocation(age, risk):
         "VT (全球股市)": round(equity_w * 0.6, 2),
         "BND (全球債券)": round(bnd_w, 2)
     }
-    # 補足四捨五入誤差
-    weights["VT (全球股市)"] += round(1.0 - sum(weights.values()), 2)
+    # 補足誤差
+    diff = 1.0 - sum(weights.values())
+    weights["VT (全球股市)"] = round(weights["VT (全球股市)"] + diff, 2)
     return weights
 
 # --- 4. 側邊欄 ---
@@ -99,11 +101,11 @@ with st.sidebar:
 st.markdown('<div class="main-title">AI 投資小秘書</div>', unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #94a3b8;'>數據驅動的 ETF 自動化配置專家</p>", unsafe_allow_html=True)
 
-# 解決問題 1: 初始畫面內容填補，不讓右半部空洞
+# 解決問題 1: 初始畫面內容填補
 if not btn_start and 'analyzed' not in st.session_state:
     col1, col2 = st.columns([1, 1])
     with col1:
-        st.markdown(f"""
+        st.markdown("""
         <div class="glass-card">
             <h2 style='color:#34d399;'>核心技術優勢</h2>
             <ul style='color:#cbd5e1; line-height:2;'>
@@ -115,18 +117,18 @@ if not btn_start and 'analyzed' not in st.session_state:
         </div>
         """, unsafe_allow_html=True)
     with col2:
-        #         st.image("https://images.unsplash.com/photo-1551288049-bbbda546697a?q=80&w=1000", caption="AI 智慧演算引擎運作中", use_container_width=True)
+        st.image("https://images.unsplash.com/photo-1551288049-bbbda546697a?q=80&w=1000", caption="AI 智慧演算引擎運作中")
 else:
     st.session_state['analyzed'] = True
     ann_ret, vol, fv = calculate_metrics(u_risk, u_years, u_monthly)
     weights = get_allocation(u_age, u_risk)
 
-    # 解決問題 2 & 3: 移除空框框，並讓所有數據隨投資期間連動
+    # 解決問題 2 & 3: 移除空框框，數據連動
     st.markdown("### 📊 關鍵數據概覽")
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("建議股債比", f"{int((1-weights['BND (全球債券)'])*100)} : {int(weights['BND (全球債券)']*100)}")
     m2.metric("預估年化報酬", f"{ann_ret:.2%}")
-    m3.metric("組合波動度 (Std)", f"{vol:.2%}")
+    m3.metric("組合波動度", f"{vol:.2%}")
     m4.metric(f"{u_years}年後預估淨值", f"${fv/1e6:.2f}M")
 
     t1, t2, t3, t4 = st.tabs(["🎯 比例配置", "📈 複利模擬", "🛡️ 風險評估", "📚 標的字典"])
@@ -142,21 +144,24 @@ else:
             <div class="glass-card">
                 <h4 style="color:#34d399">💡 AI 配置策略解析</h4>
                 <p>針對您的狀況，我們配置了 <b>{weights['BND (全球債券)']*100:.0f}%</b> 的防禦性資產。</p>
-                <p style="color:#94a3b8; font-size:0.9rem;">此配置旨在確保在市場大幅震盪時，仍能維持穩健的複利增長，適合預期投資 {u_years} 年的穩健型投資者。</p>
+                <p style="color:#94a3b8; font-size:0.9rem;">此配置旨在確保在市場大幅震盪時，仍能維持穩健的複利增長，適合投資 {u_years} 年的穩健型投資者。</p>
             </div>
             """, unsafe_allow_html=True)
 
     with t2:
-        # 解決問題 5: 使用公式生成複利曲線圖
+        # 解決問題 5: 複利曲線圖
         st.markdown("#### 🚀 未來成長趨勢模擬")
         time_axis = np.arange(0, u_years + 1)
-        growth_values = [u_monthly * 12 * (((1 + ann_ret)**t - 1) / ann_ret) * (1 + ann_ret) for t in time_axis]
-        growth_values[0] = 0 # 初始值
+        growth_values = [0]
+        for t in range(1, u_years + 1):
+            r = ann_ret
+            val = u_monthly * 12 * (((1 + r)**t - 1) / r) * (1 + r)
+            growth_values.append(val)
         
         fig_line = go.Figure()
         fig_line.add_trace(go.Scatter(x=time_axis, y=growth_values, mode='lines+markers', name='預期淨值', line=dict(color='#34d399', width=4)))
         fig_line.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
-                              xaxis_title="投資年數", yaxis_title="預估資產 (TWD)", hovermode="x unified")
+                              xaxis_title="投資年數", yaxis_title="預估資產 (TWD)")
         st.plotly_chart(fig_line, use_container_width=True)
 
     with t3:
@@ -169,30 +174,23 @@ else:
             st.markdown('<div class="glass-card" style="text-align:center;"><h5>夏普比率 (Sharpe)</h5><h2 style="color:#34d399;">0.85</h2><p>超越大盤平均水準</p></div>', unsafe_allow_html=True)
         with rc3:
             st.markdown('<div class="glass-card" style="text-align:center;"><h5>波動風險 (Sigma)</h5><h2 style="color:#fbbf24;">中低度</h2><p>適合長期資產增長</p></div>', unsafe_allow_html=True)
-        
-        st.info("💡 專業建議：您的組合具備強大的抗震能力。即便遇到類似 2020 年的疫情崩盤，預估恢復期僅需 14 個月。")
+        st.info("💡 專業建議：您的組合恢復期預估僅需 14 個月。")
 
     with t4:
-        # 解決問題 7: 豐富標的字典內容
+        # 解決問題 7: 豐富標的字典
         st.markdown("#### 🔍 標的成分深度剖析")
         col_a, col_b = st.columns(2)
         with col_a:
             with st.expander("📊 0050.TW 元大台灣50"):
-                st.write("**核心特色：** 涵蓋台灣市值最大的 50 家上市公司。")
-                st.write("**內扣費用：** 0.43% (極具競爭力)")
-                st.write("**主要持股：** 台積電 (約50%)、聯發科、鴻海。")
+                st.write("**內扣費用：** 0.43%")
+                st.write("**主要持股：** 台積電、聯發科、鴻海。")
             with st.expander("🌍 VT 全球股票 ETF"):
-                st.write("**核心特色：** 一次持有全球超過 9,000 檔股票。")
                 st.write("**內扣費用：** 0.07%")
-                st.write("**區域分配：** 北美 60%、歐洲 15%、新興市場 10%。")
+                st.write("**投資範圍：** 全球超過 9,000 檔股票。")
         with col_b:
             with st.expander("🛡️ BND 全球債券 ETF"):
-                st.write("**核心特色：** 追蹤投資級債券指數，提供資產保護。")
-                st.write("**配息率：** 約 3-4% 穩定現金流。")
-                st.write("**信評分布：** AAA 級債券佔比高。")
-            with st.expander("💰 0056.TW 元大高股息"):
-                st.write("**核心特色：** 預測未來一年現金股息殖利率最高之 50 檔股票。")
-                st.write("**適合人群：** 需要穩定現金流支出的投資者。")
+                st.write("**配息率：** 約 3.5%")
+                st.write("**信評分布：** 投資級債券為主。")
 
 # --- 6. 頁尾 ---
-st.markdown("<br><hr><p style='text-align: center; color: #64748b;'>© 2026 AI Investment Assistant Team | 專業金融演算引擎 v2.5</p>", unsafe_allow_html=True)
+st.markdown("<br><hr><p style='text-align: center; color: #64748b;'>© 2026 AI Investment Assistant Team</p>", unsafe_allow_html=True)
