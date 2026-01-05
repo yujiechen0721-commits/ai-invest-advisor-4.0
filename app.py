@@ -1,13 +1,13 @@
-# 隱藏右上角 GitHub + Fork 按鈕
-hide_menu_style = """
+# --- 隱藏右上角 GitHub、Fork 與 Deploy 按鈕 ---
+st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     header {visibility: hidden;}
-    .stDeployButton {display:none;}
+    footer {visibility: hidden;}
+    .stAppDeployButton {display:none;}
+    #stDecoration {display:none;}
     </style>
-    """
-st.markdown(hide_menu_style, unsafe_allow_html=True)
-
+    """, unsafe_allow_html=True)
 
 import streamlit as st
 import yfinance as yf
