@@ -1,7 +1,7 @@
 import streamlit as st
 import time
 
-# --- 頁面基本配置 ---
+# --- 1. 頁面基本配置 ---
 st.set_page_config(
     page_title="AI 投資小秘書 - 歡迎",
     page_icon="🤖",
@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 隱藏預設元素與自訂樣式 ---
+# --- 2. 增強版 CSS 樣式 ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -18,250 +18,166 @@ st.markdown("""
     .stAppDeployButton {display:none;}
     #stDecoration {display:none;}
     
-    /* 漸層背景 */
+    /* 現代漸層背景 */
     .stApp {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(160deg, #1a2a6c 0%, #b21f1f 50%, #fdbb2d 100%);
+        background-attachment: fixed;
     }
     
-    /* 標題動畫 */
-    @keyframes fadeInDown {
-        from {
-            opacity: 0;
-            transform: translateY(-30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
+    /* 標題區域優化 */
     .welcome-title {
-        animation: fadeInDown 1s ease-out;
         text-align: center;
         color: white;
-        font-size: 3.5rem;
-        font-weight: bold;
-        margin-top: 2rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        font-size: clamp(2.5rem, 5vw, 4rem); /* 自動適應螢幕 */
+        font-weight: 800;
+        margin-top: 3rem;
+        letter-spacing: -1px;
+        text-shadow: 0 10px 20px rgba(0,0,0,0.3);
     }
     
     .welcome-subtitle {
         text-align: center;
-        color: #E0E0E0;
-        font-size: 1.3rem;
-        margin-bottom: 3rem;
-        animation: fadeInDown 1.2s ease-out;
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 1.2rem;
+        margin-bottom: 4rem;
+        letter-spacing: 2px;
     }
     
-    /* 功能卡片 */
+    /* 毛玻璃卡片優化 */
     .feature-card {
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 20px;
-        padding: 2rem;
-        margin: 1rem;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        height: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 24px;
+        padding: 2.5rem 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        height: 320px; /* 固定高度確保對齊 */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }
     
     .feature-card:hover {
-        transform: translateY(-10px);
-        box-shadow: 0 12px 48px rgba(0,0,0,0.3);
+        transform: translateY(-12px) scale(1.02);
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
     }
     
     .feature-icon {
-        font-size: 4rem;
-        text-align: center;
-        margin-bottom: 1rem;
+        font-size: 3.5rem;
+        margin-bottom: 1.5rem;
+        filter: drop-shadow(0 5px 15px rgba(0,0,0,0.2));
     }
     
     .feature-title {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #333;
-        text-align: center;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #ffffff;
         margin-bottom: 1rem;
     }
     
     .feature-desc {
-        color: #666;
+        color: rgba(255, 255, 255, 0.8);
         text-align: center;
         line-height: 1.6;
+        font-size: 0.95rem;
     }
     
-    /* 按鈕樣式 */
-    .stButton > button {
-        background: linear-gradient(90deg, #00F260 0%, #0575E6 100%);
+    /* 數據統計方塊 */
+    .stat-box {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 20px;
+        padding: 1.2rem;
+        text-align: center;
         color: white;
-        font-size: 1.5rem;
-        font-weight: bold;
-        padding: 1rem 3rem;
-        border-radius: 50px;
-        border: none;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        transition: all 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* 修正按鈕置中與樣式 */
+    div.stButton {
+        text-align: center;
+        margin-top: 3rem;
+    }
+    
+    .stButton > button {
+        background: white !important;
+        color: #b21f1f !important;
+        font-size: 1.4rem !important;
+        font-weight: 800 !important;
+        padding: 0.8rem 4rem !important;
+        border-radius: 100px !important;
+        border: none !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3) !important;
+        transition: all 0.3s ease !important;
     }
     
     .stButton > button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 6px 25px rgba(0,0,0,0.3);
-    }
-    
-    /* 統計數字 */
-    .stat-box {
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 15px;
-        padding: 1.5rem;
-        text-align: center;
-        color: white;
-        backdrop-filter: blur(10px);
-    }
-    
-    .stat-number {
-        font-size: 2.5rem;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
-    }
-    
-    .stat-label {
-        font-size: 1rem;
-        opacity: 0.9;
+        transform: translateY(-3px) !important;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.5) !important;
+        background: #f8f8f8 !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 主標題區 ---
+# --- 3. 頁面內容渲染 ---
+
+# 主標題
 st.markdown('<div class="welcome-title">🤖 AI 投資小秘書</div>', unsafe_allow_html=True)
-st.markdown('<div class="welcome-subtitle">智能配置 · 精準預測 · 穩健成長</div>', unsafe_allow_html=True)
+st.markdown('<div class="welcome-subtitle">專業級資產配置 · 數據驅動成長</div>', unsafe_allow_html=True)
 
-# --- 統計數據展示 ---
-col1, col2, col3, col4 = st.columns(4)
+# 統計數據欄位 (減少留白)
+s1, s2, s3, s4 = st.columns(4)
+stats = [
+    ("10Y+", "歷史數據"), ("4大", "精選標的"), 
+    ("Smart", "AI配置"), ("20Y", "長線模擬")
+]
+for col, (num, label) in zip([s1, s2, s3, s4], stats):
+    with col:
+        st.markdown(f'<div class="stat-box"><div style="font-size:1.8rem; font-weight:800;">{num}</div><div style="font-size:0.8rem; opacity:0.8;">{label}</div></div>', unsafe_allow_html=True)
 
-with col1:
-    st.markdown("""
-    <div class="stat-box">
-        <div class="stat-number">10+</div>
-        <div class="stat-label">年歷史數據</div>
-    </div>
-    """, unsafe_allow_html=True)
+st.write("---")
 
+# 功能矩陣 (優化卡片布局)
+features = [
+    {"icon": "📊", "title": "智能資產配置", "desc": "結合年齡與風險承受度，自動計算台股、全球股市與債券的最優比例。"},
+    {"icon": "📈", "title": "複利成效預測", "desc": "運用蒙地卡羅模擬法預測未來20年資產走勢，讓複利效應清晰可見。"},
+    {"icon": "🎯", "title": "風險指標監控", "desc": "即時分析年化報酬、波動率與最大回撤，在獲利與風險間取得平衡。"},
+    {"icon": "💡", "title": "策略調整建議", "desc": "依據不同人生階段與市場情緒，提供動態再平衡建議，守護您的投資成果。"},
+    {"icon": "🔍", "title": "標的深度解析", "desc": "0050、0056、VT、BND 深度拆解，理解每一塊錢的去向。"},
+    {"icon": "⚡", "title": "情境壓力測試", "desc": "模擬歷史金融危機對組合的影響，確保您的資產在極端市場下依然穩健。"}
+]
+
+# 循環產生 2x3 的排列
+for i in range(0, 6, 3):
+    cols = st.columns(3)
+    for j in range(3):
+        f = features[i + j]
+        with cols[j]:
+            st.markdown(f"""
+                <div class="feature-card">
+                    <div class="feature-icon">{f['icon']}</div>
+                    <div class="feature-title">{f['title']}</div>
+                    <div class="feature-desc">{f['desc']}</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+# --- 4. 操作區 ---
+st.write("")
+col1, col2, col3 = st.columns([1, 1.5, 1])
 with col2:
-    st.markdown("""
-    <div class="stat-box">
-        <div class="stat-number">4</div>
-        <div class="stat-label">精選 ETF</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col3:
-    st.markdown("""
-    <div class="stat-box">
-        <div class="stat-number">AI</div>
-        <div class="stat-label">智能演算法</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col4:
-    st.markdown("""
-    <div class="stat-box">
-        <div class="stat-number">20年</div>
-        <div class="stat-label">複利模擬</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# --- 核心功能介紹 ---
-st.markdown("<h2 style='text-align: center; color: white; margin: 3rem 0 2rem 0;'>✨ 核心功能</h2>", unsafe_allow_html=True)
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.markdown("""
-    <div class="feature-card">
-        <div class="feature-icon">📊</div>
-        <div class="feature-title">智能資產配置</div>
-        <div class="feature-desc">
-            根據您的年齡、風險偏好，AI自動計算最適配置比例，涵蓋台股、全球股市與債券市場。
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col2:
-    st.markdown("""
-    <div class="feature-card">
-        <div class="feature-icon">📈</div>
-        <div class="feature-title">複利成效預測</div>
-        <div class="feature-desc">
-            模擬20年定期定額投資，視覺化呈現資產成長曲線，預測最終資產與報酬率。
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col3:
-    st.markdown("""
-    <div class="feature-card">
-        <div class="feature-icon">🎯</div>
-        <div class="feature-title">風險動態監控</div>
-        <div class="feature-desc">
-            即時計算投資組合波動率、最大回撤、夏普比率等專業指標，掌握風險狀況。
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-st.markdown("<br><br>", unsafe_allow_html=True)
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.markdown("""
-    <div class="feature-card">
-        <div class="feature-icon">💡</div>
-        <div class="feature-title">專業顧問建議</div>
-        <div class="feature-desc">
-            依據市場數據與您的投資目標，提供個人化的投資策略與調整建議。
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col2:
-    st.markdown("""
-    <div class="feature-card">
-        <div class="feature-icon">🔍</div>
-        <div class="feature-title">標的深度分析</div>
-        <div class="feature-desc">
-            詳細解析每個ETF的特性、歷史績效、費用率，讓您投資更有信心。
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col3:
-    st.markdown("""
-    <div class="feature-card">
-        <div class="feature-icon">⚡</div>
-        <div class="feature-title">情境壓力測試</div>
-        <div class="feature-desc">
-            模擬金融危機、熊市等極端情況下的投資組合表現，評估抗壓能力。
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# --- 進入按鈕 ---
-st.markdown("<br><br>", unsafe_allow_html=True)
-
-col1, col2, col3 = st.columns([1, 1, 1])
-with col2:
-    if st.button("🚀 進入投資小秘書", use_container_width=True):
-        st.session_state['entered'] = True
+    if st.button("🚀 開 始 体 驗"):
         st.balloons()
-        time.sleep(0.5)
+        time.sleep(1)
         st.switch_page("pages/main.py")
 
-# --- 底部資訊 ---
-st.markdown("<br><br>", unsafe_allow_html=True)
+# 頁尾
 st.markdown("""
-<div style='text-align: center; color: rgba(255,255,255,0.7); padding: 2rem;'>
-    <p style='font-size: 0.9rem;'>⚠️ 投資警語：本系統僅供參考，不構成投資建議。投資有風險，請謹慎評估。</p>
-    <p style='font-size: 0.8rem; margin-top: 1rem;'>© 2024 AI 投資小秘書 | 讓智能科技為您的財富護航</p>
-</div>
+    <div style='text-align: center; color: rgba(255,255,255,0.6); padding-top: 5rem; padding-bottom: 2rem;'>
+        <p style='font-size: 0.85rem;'>本工具僅供教學參考，投資必有風險，入市請謹慎評估。</p>
+        <p style='font-size: 0.75rem;'>© 2026 AI Investment Assistant Team</p>
+    </div>
 """, unsafe_allow_html=True)
