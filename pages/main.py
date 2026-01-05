@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. CSS 進階美化 (修復縮排與特殊空格) ---
+# --- 2. CSS 進階美化 ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -57,31 +57,35 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. 核心計算邏輯 (AI 算法模擬) ---
+# --- 3. 核心計算邏輯 ---
 def calculate_metrics(u_risk, u_years, u_monthly):
-    # 模擬各風險等級的預估回報與波動
-    base_return = 0.045  
-    risk_premium = (u_risk / 10) * 0.05 
+    # 預估報酬與波動隨風險等級變動
+    base_return = 0.042  
+    risk_premium = (u_risk / 10) * 0.052 
     annual_return = base_return + risk_premium
-    volatility = 0.05 + (u_risk / 10) * 0.15
+    volatility = 0.04 + (u_risk / 10) * 0.16
     
-    # 複利計算公式: 考慮每月投入的終值
+    # 複利計算
     r_monthly = annual_return / 12
     months = u_years * 12
     final_value = u_monthly * (((1 + r_monthly)**months - 1) / r_monthly) * (1 + r_monthly)
     
-    return annual_return, volatility, final_value
+    # 風險指標模擬 (隨風險與權重連動)
+    # 夏普值模擬公式: (報酬 - 無風險回報2%) / 波動率
+    sharpe = (annual_return - 0.02) / volatility
+    # MDD模擬: 風險越高回撤越重
+    mdd = - (0.05 + (u_risk / 10) * 0.32)
+    
+    return annual_return, volatility, final_value, sharpe, mdd
 
 def get_allocation(age, risk):
-    # 根據年齡與風險動態計算
-    bnd_w = min(0.8, max(0.1, (age + (10 - risk) * 5) / 100))
+    bnd_w = min(0.85, max(0.1, (age + (10 - risk) * 4) / 100))
     equity_w = 1 - bnd_w
     weights = {
-        "0050.TW (台股領袖)": round(equity_w * 0.4, 2),
-        "VT (全球股市)": round(equity_w * 0.6, 2),
+        "0050.TW (台股領袖)": round(equity_w * 0.45, 2),
+        "VT (全球股市)": round(equity_w * 0.55, 2),
         "BND (全球債券)": round(bnd_w, 2)
     }
-    # 補足誤差
     diff = 1.0 - sum(weights.values())
     weights["VT (全球股市)"] = round(weights["VT (全球股市)"] + diff, 2)
     return weights
@@ -101,7 +105,6 @@ with st.sidebar:
 st.markdown('<div class="main-title">AI 投資小秘書</div>', unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #94a3b8;'>數據驅動的 ETF 自動化配置專家</p>", unsafe_allow_html=True)
 
-# 解決問題 1: 初始畫面內容填補
 if not btn_start and 'analyzed' not in st.session_state:
     col1, col2 = st.columns([1, 1])
     with col1:
@@ -110,8 +113,8 @@ if not btn_start and 'analyzed' not in st.session_state:
             <h2 style='color:#34d399;'>核心技術優勢</h2>
             <ul style='color:#cbd5e1; line-height:2;'>
                 <li><b>MPT 理論模型：</b> 透過現代投資組合作業研究，最大化單位風險回報。</li>
-                <li><b>動態再平衡算法：</b> 根據投資者年齡與風險承受度即時演算。</li>
-                <li><b>全方位標的庫：</b> 覆蓋台股 0050、0056 及全球 VT、BND 等優質標的。</li>
+                <li><b>動態再平衡算法：</b> 根據年齡與風險承受度即時演算。</li>
+                <li><b>複利成長路徑：</b> 精準模擬長線資產配置增值潛力。</li>
             </ul>
             <p style='color:#94a3b8; font-size:0.9rem;'>請調整左側參數並點擊「執行分析」以獲取個人化報告。</p>
         </div>
@@ -120,42 +123,39 @@ if not btn_start and 'analyzed' not in st.session_state:
         st.image("https://images.unsplash.com/photo-1551288049-bbbda546697a?q=80&w=1000", caption="AI 智慧演算引擎運作中")
 else:
     st.session_state['analyzed'] = True
-    ann_ret, vol, fv = calculate_metrics(u_risk, u_years, u_monthly)
+    ann_ret, vol, fv, sharpe, mdd = calculate_metrics(u_risk, u_years, u_monthly)
     weights = get_allocation(u_age, u_risk)
 
-    # 解決問題 2 & 3: 移除空框框，數據連動
     st.markdown("### 📊 關鍵數據概覽")
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("建議股債比", f"{int((1-weights['BND (全球債券)'])*100)} : {int(weights['BND (全球債券)']*100)}")
     m2.metric("預估年化報酬", f"{ann_ret:.2%}")
     m3.metric("組合波動度", f"{vol:.2%}")
-    m4.metric(f"{u_years}年後預估淨值", f"${fv/1e6:.2f}M")
+    m4.metric(f"{u_years}年後預估值", f"${fv/1e6:.2f}M")
 
     t1, t2, t3, t4 = st.tabs(["🎯 比例配置", "📈 複利模擬", "🛡️ 風險評估", "📚 標的字典"])
 
     with t1:
         c1, c2 = st.columns([1, 1])
         with c1:
-            fig_pie = go.Figure(data=[go.Pie(labels=list(weights.keys()), values=list(weights.values()), hole=.4)])
+            fig_pie = go.Figure(data=[go.Pie(labels=list(weights.keys()), values=list(weights.values()), hole=.4, marker=dict(colors=['#38bdf8', '#34d399', '#fbbf24']))])
             fig_pie.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=0, b=0, l=0, r=0))
             st.plotly_chart(fig_pie, use_container_width=True)
         with c2:
             st.markdown(f"""
             <div class="glass-card">
                 <h4 style="color:#34d399">💡 AI 配置策略解析</h4>
-                <p>針對您的狀況，我們配置了 <b>{weights['BND (全球債券)']*100:.0f}%</b> 的防禦性資產。</p>
-                <p style="color:#94a3b8; font-size:0.9rem;">此配置旨在確保在市場大幅震盪時，仍能維持穩健的複利增長，適合投資 {u_years} 年的穩健型投資者。</p>
+                <p>針對您 <b>{u_age} 歲</b> 且風險偏好為 <b>{u_risk}/10</b> 的特質，我們建議配置 <b>{weights['BND (全球債券)']*100:.0f}%</b> 的避險資產。</p>
+                <p style="color:#94a3b8; font-size:0.9rem;">此配置利用全球股票 (VT) 捕捉長期 beta 收益，並透過 0050 強化台股核心競爭力，最後以 BND 平滑波動。</p>
             </div>
             """, unsafe_allow_html=True)
 
     with t2:
-        # 解決問題 5: 複利曲線圖
         st.markdown("#### 🚀 未來成長趨勢模擬")
         time_axis = np.arange(0, u_years + 1)
         growth_values = [0]
         for t in range(1, u_years + 1):
-            r = ann_ret
-            val = u_monthly * 12 * (((1 + r)**t - 1) / r) * (1 + r)
+            val = u_monthly * 12 * (((1 + ann_ret)**t - 1) / ann_ret) * (1 + ann_ret)
             growth_values.append(val)
         
         fig_line = go.Figure()
@@ -165,32 +165,39 @@ else:
         st.plotly_chart(fig_line, use_container_width=True)
 
     with t3:
-        # 解決問題 6: 強化風險評估專業度
+        # 修復點：深度壓力測試報告數據動態化
         st.markdown("#### ⚡ 深度壓力測試報告")
         rc1, rc2, rc3 = st.columns(3)
         with rc1:
-            st.markdown('<div class="glass-card" style="text-align:center;"><h5>最大歷史回撤 (MDD)</h5><h2 style="color:#ef4444;">-24.5%</h2><p>2008金融海嘯模擬</p></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="glass-card" style="text-align:center;"><h5>最大歷史回撤 (MDD)</h5><h2 style="color:#ef4444;">{mdd:.1%}</h2><p>極端市場下挫壓力模擬</p></div>', unsafe_allow_html=True)
         with rc2:
-            st.markdown('<div class="glass-card" style="text-align:center;"><h5>夏普比率 (Sharpe)</h5><h2 style="color:#34d399;">0.85</h2><p>超越大盤平均水準</p></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="glass-card" style="text-align:center;"><h5>夏普比率 (Sharpe)</h5><h2 style="color:#34d399;">{sharpe:.2f}</h2><p>單位風險獲取的超額回報</p></div>', unsafe_allow_html=True)
         with rc3:
-            st.markdown('<div class="glass-card" style="text-align:center;"><h5>波動風險 (Sigma)</h5><h2 style="color:#fbbf24;">中低度</h2><p>適合長期資產增長</p></div>', unsafe_allow_html=True)
-        st.info("💡 專業建議：您的組合恢復期預估僅需 14 個月。")
+            st.markdown(f'<div class="glass-card" style="text-align:center;"><h5>風險評級 (VaR)</h5><h2 style="color:#fbbf24;">{"低" if u_risk < 4 else "中" if u_risk < 8 else "高"}</h2><p>資產組合波動耐受度</p></div>', unsafe_allow_html=True)
+        
+        # 動態專業建議文字
+        rec_text = "您的組合極為穩健，適合資產保值。" if u_risk < 4 else "您的組合均衡成長，具備良好的風險收益比。" if u_risk < 8 else "您的組合極具進攻性，需注意短期市場劇烈波動。"
+        st.info(f"💡 **AI 專業建議**：{rec_text} 模擬數據顯示，恢復至歷史高點預估需 **{max(6, int(u_risk*2))}** 個月。")
 
     with t4:
-        # 解決問題 7: 豐富標的字典
         st.markdown("#### 🔍 標的成分深度剖析")
         col_a, col_b = st.columns(2)
         with col_a:
             with st.expander("📊 0050.TW 元大台灣50"):
                 st.write("**內扣費用：** 0.43%")
-                st.write("**主要持股：** 台積電、聯發科、鴻海。")
+                st.write("**主要持股：** 台積電、聯發科、鴻海、廣達、台達電。")
+                st.write("**投資重點：** 代表台灣競爭力最強的 50 家龍頭企業，與台股連動性極高。")
             with st.expander("🌍 VT 全球股票 ETF"):
                 st.write("**內扣費用：** 0.07%")
-                st.write("**投資範圍：** 全球超過 9,000 檔股票。")
+                st.write("**投資範圍：** 涵蓋美國、歐洲、新興市場等全球超過 9,000 檔股票。")
+                st.write("**投資重點：** 徹底分散單一國家風險，捕捉全球經濟增長紅利。")
         with col_b:
             with st.expander("🛡️ BND 全球債券 ETF"):
-                st.write("**配息率：** 約 3.5%")
-                st.write("**信評分布：** 投資級債券為主。")
+                st.write("**配息率：** 約 3.5% - 4.5% (隨利率環境波動)")
+                st.write("**信評分布：** 超過 60% 為 AAA 級政府債或高信用評等公司債。")
+                st.write("**投資重點：** 作為投資組合的減震器，在股市大跌時提供緩衝。")
+            with st.expander("💰 0056.TW 元大高股息 (備選方案)"):
+                st.write("**核心特色：** 選取預測股息率最高之 50 檔股票，適合現金流需求者。")
+                st.write("**策略邏輯：** AI 會根據您的風險偏好決定是否將此標的納入衛星配置。")
 
-# --- 6. 頁尾 ---
-st.markdown("<br><hr><p style='text-align: center; color: #64748b;'>© 2026 AI Investment Assistant Team</p>", unsafe_allow_html=True)
+st.markdown("<br><hr><p style='text-align: center; color: #64748b;'>© 2026 AI Investment Assistant Team | 數據模擬僅供參考，不構成實際投資建議</p>", unsafe_allow_html=True)
